@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Allo Bank PayLater · Paid Social Performance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Intro loader -->
+<div class="loader" id="loader" aria-hidden="true">
+  <div class="loader__mark">
+    <img src="assets/paylater-white.png" alt="">
+    <span class="loader__bar"><i></i></span>
+  </div>
+</div>
+
+<!-- Top navigation -->
+<header class="nav" id="nav">
+  <div class="nav__inner">
+    <a class="nav__brand" href="#top"><img src="assets/paylater-color.png" alt="Allo Bank PayLater"></a>
+    <nav class="nav__links" aria-label="Sections">
+      <a href="#overview">Overview</a>
+      <a href="#trend">Trend</a>
+      <a href="#funnel">Funnel</a>
+      <a href="#channels">Channels</a>
+      <a href="#creatives">Creatives</a>
+      <a href="#accounts">Accounts</a>
+    </nav>
+    <span class="nav__stamp" id="stamp"></span>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- Hero -->
+  <section class="hero" id="overview">
+    <div class="hero__orbs" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="hero__grid" aria-hidden="true"></div>
+    <div class="wrap hero__inner">
+      <div class="hero__copy reveal">
+        <p class="eyebrow">Growth Division · Paid Social</p>
+        <h1>Meta &amp; TikTok<br><span class="hl">performance</span>, in one view</h1>
+        <p class="hero__sub">Cost from PayLater ad accounts, activations from the backend, matched per ad. Filter the period and channel; every number below follows.</p>
+      </div>
+
+      <div class="filters reveal" role="group" aria-label="Filters">
+        <div class="seg" id="periodSeg" role="radiogroup" aria-label="Period">
+          <button data-p="ytd" class="on" role="radio" aria-checked="true">2026 YTD</button>
+          <button data-p="90" role="radio" aria-checked="false">Last 90 days</button>
+          <button data-p="30" role="radio" aria-checked="false">Last 30 days</button>
+          <button data-p="7" role="radio" aria-checked="false">Last 7 days</button>
+        </div>
+        <div class="seg" id="channelSeg" role="radiogroup" aria-label="Channel">
+          <button data-c="all" class="on" role="radio" aria-checked="true">All</button>
+          <button data-c="Meta" role="radio" aria-checked="false"><i class="dot dot--meta"></i>Meta</button>
+          <button data-c="TikTok" role="radio" aria-checked="false"><i class="dot dot--tt"></i>TikTok</button>
+        </div>
+        <span class="filters__range" id="rangeLabel"></span>
+      </div>
+
+      <div class="hero__stats reveal">
+        <div class="bigstat">
+          <span class="bigstat__label">α-Activations</span>
+          <span class="bigstat__value" data-count id="heroAlpha">0</span>
+          <span class="bigstat__meta" id="heroAlphaMeta"></span>
+        </div>
+        <div class="bigstat">
+          <span class="bigstat__label">α-CPA</span>
+          <span class="bigstat__value" id="heroCpa">–</span>
+          <div class="meter" id="heroMeter" role="img" aria-label="">
+            <div class="meter__track"><div class="meter__fill"></div><div class="meter__cap"></div></div>
+            <div class="meter__legend"><span>Rp0</span><span>Cap Rp500K</span><span>Rp1M+</span></div>
+          </div>
+        </div>
+        <div class="bigstat">
+          <span class="bigstat__label">α per day</span>
+          <span class="bigstat__value" id="heroPerDay">–</span>
+          <span class="bigstat__meta">January target: <b>100 / day</b></span>
+          <div class="ring" id="heroRing" aria-hidden="true">
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="ring__track"/><circle cx="60" cy="60" r="52" class="ring__fill"/></svg>
+            <span class="ring__pct"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ticker" aria-hidden="true"><div class="ticker__track" id="ticker"></div></div>
+  </section>
+
+  <!-- KPI tiles -->
+  <section class="section section--tight">
+    <div class="wrap">
+      <div class="tiles" id="tiles"></div>
+    </div>
+  </section>
+
+  <!-- Trend -->
+  <section class="section" id="trend">
+    <div class="wrap">
+      <div class="section__head reveal">
+        <div>
+          <p class="eyebrow eyebrow--dark">01 · Trend</p>
+          <h2>α-Activations and cost per α over time</h2>
+        </div>
+        <div class="seg seg--light" id="grainSeg" role="radiogroup" aria-label="Granularity">
+          <button data-g="week" class="on" role="radio" aria-checked="true">Weekly</button>
+          <button data-g="month" role="radio" aria-checked="false">Monthly</button>
+        </div>
+      </div>
+      <div class="grid2">
+        <figure class="card chart reveal">
+          <figcaption><h3>α-Activations</h3><p>Backend, stacked by channel</p></figcaption>
+          <div class="legend" id="legAlpha"></div>
+          <div class="chart__plot" id="chartAlpha"></div>
+        </figure>
+        <figure class="card chart reveal">
+          <figcaption><h3>α-CPA</h3><p>PayLater cost ÷ backend α · dashed line is the Rp500K cap</p></figcaption>
+          <div class="legend" id="legCpa"></div>
+          <div class="chart__plot" id="chartCpa"></div>
+          <p class="chart__note">Weeks with fewer than 5 α are left out. The latest weeks are still filling in, because activations arrive days after the ad spend.</p>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- Funnel -->
+  <section class="section section--alt" id="funnel">
+    <div class="wrap">
+      <div class="section__head reveal">
+        <div>
+          <p class="eyebrow eyebrow--dark">02 · Funnel</p>
+          <h2>From install to α</h2>
+        </div>
+        <p class="section__note">Installs as reported by the platform; Incoming, αβ and α from the backend.</p>
+      </div>
+      <div class="funnel card reveal" id="funnelBox"></div>
+    </div>
+  </section>
+
+  <!-- Channels -->
+  <section class="section" id="channels">
+    <div class="wrap">
+      <div class="section__head reveal">
+        <div>
+          <p class="eyebrow eyebrow--dark">03 · Channels</p>
+          <h2>Meta vs TikTok</h2>
+        </div>
+      </div>
+      <div class="duel" id="duel"></div>
+      <div class="card attrib reveal">
+        <div class="attrib__head">
+          <div><h3>Who gets the credit?</h3><p>α-Activations by source: platform-reported, AppsFlyer (by install date) and backend.</p></div>
+          <div class="legend" id="legAttrib"></div>
+        </div>
+        <div class="chart__plot chart__plot--short" id="chartAttrib"></div>
+        <p class="chart__note" id="attribNote"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Creatives -->
+  <section class="section section--dark" id="creatives">
+    <div class="hero__orbs hero__orbs--soft" aria-hidden="true"><span></span><span></span></div>
+    <div class="wrap">
+      <div class="section__head reveal">
+        <div>
+          <p class="eyebrow">04 · Creatives</p>
+          <h2 class="on-dark">The creatives carrying the channel</h2>
+        </div>
+        <div class="seg" id="sortSeg" role="radiogroup" aria-label="Sort creatives">
+          <button data-s="alpha" class="on" role="radio" aria-checked="true">Most α</button>
+          <button data-s="cpa" role="radio" aria-checked="false">Lowest α-CPA</button>
+          <button data-s="cost" role="radio" aria-checked="false">Most spend</button>
+        </div>
+      </div>
+      <p class="creative__note reveal" id="creativeNote"></p>
+      <div class="gallery" id="gallery"></div>
+
+      <div class="card card--glass board reveal">
+        <div class="board__head">
+          <h3 class="on-dark">All creatives</h3>
+          <input type="search" id="search" placeholder="Search creative name…" aria-label="Search creatives">
+        </div>
+        <div class="table-wrap"><table class="table table--dark" id="crTable"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Accounts -->
+  <section class="section" id="accounts">
+    <div class="wrap">
+      <div class="section__head reveal">
+        <div>
+          <p class="eyebrow eyebrow--dark">05 · Accounts</p>
+          <h2>Where the spend and the α come from</h2>
+        </div>
+        <p class="section__note">Cost counts toward PayLater only for PayLater accounts. α from every account counts, because ads in other accounts can still bring PayLater users.</p>
+      </div>
+      <div class="card reveal"><div class="table-wrap"><table class="table" id="accTable"></table></div></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <img src="assets/paylater-white.png" alt="Allo Bank PayLater" class="footer__logo">
+      <div class="footer__notes">
+        <p><b>How to read this.</b> Cost = spend in PayLater ad accounts (Meta: PayLater, Premium, Backup · TikTok: PayLater). α / αβ / Incoming = backend, matched per date + channel + ad ID, including the daily “Unidentified” rows. α-CPA = PayLater cost ÷ backend α. Platform and AppsFlyer numbers are shown for comparison only.</p>
+        <p id="footStamp"></p>
+      </div>
+    </div>
+  </footer>
+</main>
+
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
