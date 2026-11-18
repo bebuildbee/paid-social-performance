@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#333333"/>
+  <!-- social: speech bubble -->
+  <path fill="#FFAF03" d="M19 11h22a10 10 0 0 1 10 10v14a10 10 0 0 1-10 10H26l-9.5 8.2c-1 .9-2.5.1-2.3-1.2L15.3 44.4A10 10 0 0 1 9 35V21a10 10 0 0 1 10-10z"/>
+  <!-- performance: rising bars -->
+  <rect x="17" y="30" width="6" height="8" rx="2" fill="#333333"/>
+  <rect x="27" y="25" width="6" height="13" rx="2" fill="#333333"/>
+  <rect x="37" y="19" width="6" height="19" rx="2" fill="#333333"/>
+  <!-- smart: spark -->
+  <path fill="#FFAF03" stroke="#333333" stroke-width="3" stroke-linejoin="round" paint-order="stroke"
+        d="M52 4c.9 4.6 2.4 6.1 7 7-4.6.9-6.1 2.4-7 7-.9-4.6-2.4-6.1-7-7 4.6-.9 6.1-2.4 7-7z"/>
+</svg>
