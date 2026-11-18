@@ -33,8 +33,9 @@
   const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 864e5) + 1;
   const weekStart = (s) => { const d = new Date(s + 'T00:00:00Z'); const w = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - w); return d.toISOString().slice(0, 10); };
   function range() {
-    const end = D.updated;
-    const start = state.period === 'ytd' ? D.start : addDays(end, -(+state.period - 1));
+    let end = D.updated, start;
+    if (state.period === 'custom') { start = state.from; end = state.to; }
+    else start = state.period === 'ytd' ? D.start : addDays(end, -(+state.period - 1));
     const len = daysBetween(start, end);
     const pEnd = addDays(start, -1), pStart = addDays(start, -len);
     return { start, end, len, prev: pStart >= D.start ? { start: pStart, end: pEnd } : null };
@@ -387,14 +388,69 @@
   function observe(nodes) { nodes.forEach((n) => io.observe(n)); }
 
   /* ---------- wiring ---------- */
-  function seg(id, key, attr, after) {
+  function setOn(id, b) { $$(`#${id} button`).forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); }
+  function seg(id, key, attr, after, intercept) {
     $$(`#${id} button`).forEach((b) => b.addEventListener('click', () => {
-      $$(`#${id} button`).forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
-      state[key] = b.dataset[attr]; after();
+      if (intercept && intercept(b)) { openPop(); return; }
+      setOn(id, b); state[key] = b.dataset[attr];
+      if (id === 'periodSeg') $('#customLabel').textContent = 'Custom';
+      after();
     }));
   }
+
+  /* ---------- custom date range ---------- */
+  const pop = $('#datePop'), dFrom = $('#dFrom'), dTo = $('#dTo'), dErr = $('#dErr'), cBtn = $('#customBtn');
+  [dFrom, dTo].forEach((i) => { i.min = D.start; i.max = D.updated; });
+  function openPop() {
+    const r = range();
+    dFrom.value = state.from || r.start; dTo.value = state.to || r.end; dErr.textContent = '';
+    pop.hidden = false; cBtn.setAttribute('aria-expanded', 'true'); dFrom.focus();
+  }
+  function closePop() { pop.hidden = true; cBtn.setAttribute('aria-expanded', 'false'); }
+  const short = (s) => new Date(s + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  function applyCustom() {
+    let f = dFrom.value, t = dTo.value;
+    if (!f || !t) { dErr.textContent = 'Pick both dates.'; return; }
+    if (f > t) { dErr.textContent = '“From” must be on or before “To”.'; return; }
+    if (f < D.start) f = D.start; if (t > D.updated) t = D.updated;
+    if (f > D.updated || t < D.start) { dErr.textContent = `Data covers ${dLabel(D.start)} to ${dLabel(D.updated)}.`; return; }
+    state.from = f; state.to = t; state.period = 'custom';
+    setOn('periodSeg', cBtn);
+    $('#customLabel').textContent = `${short(f)} – ${short(t)}`;
+    closePop(); renderAll();
+  }
+  $('#dApply').addEventListener('click', applyCustom);
+  $('#dCancel').addEventListener('click', closePop);
+  [dFrom, dTo].forEach((i) => i.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyCustom(); }));
+  $$('#dQuick button').forEach((b) => b.addEventListener('click', () => {
+    const end = D.updated, y = end.slice(0, 4), m = +end.slice(5, 7);
+    const mStart = (yy, mm) => `${yy}-${String(mm).padStart(2, '0')}-01`;
+    const mEnd = (yy, mm) => addDays(mm === 12 ? `${+yy + 1}-01-01` : mStart(yy, mm + 1), -1);
+    const q = { thisMonth: [mStart(y, m), end], lastMonth: m === 1 ? [mStart(+y - 1, 12), mEnd(+y - 1, 12)] : [mStart(y, m - 1), mEnd(y, m - 1)],
+      q3: ['2026-07-01', '2026-09-30'], q4: ['2026-10-01', end] }[b.dataset.q];
+    dFrom.value = q[0] < D.start ? D.start : q[0]; dTo.value = q[1] > end ? end : q[1]; dErr.textContent = '';
+  }));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) closePop(); });
+  document.addEventListener('click', (e) => { if (!pop.hidden && !pop.contains(e.target) && !cBtn.contains(e.target)) closePop(); });
+
+  /* ---------- full screen ---------- */
+  const fsBtn = $('#fsBtn'), root = document.documentElement;
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+  if (!(root.requestFullscreen || root.webkitRequestFullscreen)) fsBtn.hidden = true;
+  fsBtn.addEventListener('click', () => {
+    if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+  });
+  const fsSync = () => {
+    const on = !!fsEl();
+    root.classList.toggle('is-fullscreen', on);
+    fsBtn.setAttribute('aria-label', on ? 'Exit full screen' : 'Enter full screen');
+    fsBtn.title = on ? 'Exit full screen' : 'Full screen';
+  };
+  document.addEventListener('fullscreenchange', fsSync);
+  document.addEventListener('webkitfullscreenchange', fsSync);
   function renderAll() { hero(); tiles(); chartAlpha(); chartCpa(); funnel(); duel(); chartAttrib(); gallery(); accounts(); ticker(); }
-  seg('periodSeg', 'period', 'p', renderAll);
+  seg('periodSeg', 'period', 'p', renderAll, (b) => b.dataset.p === 'custom');
   seg('channelSeg', 'ch', 'c', renderAll);
   seg('grainSeg', 'grain', 'g', () => { chartAlpha(); chartCpa(); });
   seg('sortSeg', 'sort', 's', gallery);
