@@ -7,7 +7,7 @@
   const COLORS = { Meta: '#333333', TikTok: '#FFAF03' };
   const CHANNELS = ['Meta', 'TikTok'];
   const CAP = 500000;
-  const state = { period: 'ytd', ch: 'all', grain: 'week', sort: 'alpha', search: '', crSort: 'a', crAsc: false, accSort: 'cost', accAsc: false };
+  const state = { period: 'ytd', ch: 'all', grain: 'week', sort: 'alpha', search: '', crSort: 'a', crAsc: false, accSort: 'cost', accAsc: false, showUnid: true };
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const NS = 'http://www.w3.org/2000/svg';
@@ -51,7 +51,8 @@
     return v;
   }
   const kpi = (v) => ({ cost: v[IDX.cost], costAll: v[IDX.costAll], inst: v[IDX.inst], inc: v[IDX.incBe], ab: v[IDX.actBe], a: v[IDX.alphaBe],
-    aDb: v[IDX.alpha], aAf: v[IDX.alphaAf], cpa: v[IDX.alphaBe] ? v[IDX.cost] / v[IDX.alphaBe] : null });
+    aDb: v[IDX.alpha], aAf: v[IDX.alphaAf], cpa: v[IDX.alphaBe] ? v[IDX.cost] / v[IDX.alphaBe] : null,
+    cl: v[IDX.clBe], avgCl: v[IDX.actBe] ? v[IDX.clBe] / v[IDX.actBe] : null });
   function buckets(r, grain) {
     const map = new Map();
     D.daily.forEach((row) => {
@@ -253,6 +254,8 @@
       ['αβ-Activations', k.ab, pk && pk.ab, fmtN, 'up', ser((x) => x.ab)],
       ['α-Activations', k.a, pk && pk.a, fmtN, 'up', ser((x) => x.a)],
       ['α-CPA', k.cpa, pk && pk.cpa, fmtRp, 'down', ser((x) => x.cpa || 0), true],
+      ['Credit limit given', k.cl, pk && pk.cl, fmtRp, 'up', ser((x) => x.cl)],
+      ['Avg limit per αβ', k.avgCl, pk && pk.avgCl, fmtRp, 'up', ser((x) => x.avgCl || 0)],
     ];
     $('#tiles').innerHTML = defs.map(([label, v, pv, f, good, s, accent], i) => {
       let delta = `<span class="tile__delta">${r.prev ? 'no data before' : 'vs previous period n/a'}</span>`;
@@ -268,7 +271,7 @@
   function ticker() {
     const r = range(), parts = [];
     CHANNELS.forEach((c) => { const k = kpi(sum(r, c)); parts.push(`${c}: <b>${fmtFull(k.a)}</b> α at <b>${fmtRp(k.cpa)}</b> per α`); });
-    const top = creatives()[0]; if (top) parts.push(`Top creative: <b>${esc(top.name)}</b> · ${fmtFull(top.a)} α`);
+    const top = creatives().filter((x) => !x.unid)[0]; if (top) parts.push(`Top creative: <b>${esc(top.name)}</b> · ${fmtFull(top.a)} α`);
     const k = kpi(sum(r)); parts.push(`Installs → α: <b>${pct(k.inst ? k.a / k.inst : null)}</b>`); parts.push(`α share of αβ: <b>${pct(k.ab ? k.a / k.ab : null)}</b>`);
     parts.push(`Data until <b>${dLabel(D.updated)}</b>`);
     const html = parts.map((p) => `<span>${p}</span>`).join('');
@@ -310,9 +313,9 @@
     const r = range(), m0 = r.start.slice(0, 7), m1 = r.end.slice(0, 7), map = new Map();
     D.creatives.forEach((row) => {
       if (row[0] < m0 || row[0] > m1 || !chOK(row[1])) return;
-      const key = row[1] + '|' + row[2];
-      if (!map.has(key)) map.set(key, { key, ch: row[1], name: row[2], v: zero() });
-      addV(map.get(key).v, row, 3);
+      const key = row[1] + '|' + row[2] + '|' + row[3];
+      if (!map.has(key)) map.set(key, { key, ch: row[1], name: row[2], fmt: row[3], unid: row[2] === 'Unidentified', v: zero() });
+      addV(map.get(key).v, row, 4);
     });
     return [...map.values()].map((x) => {
       const k = kpi(x.v), info = D.creativeInfo[x.key] || {};
@@ -320,7 +323,7 @@
     }).filter((x) => x.costAll > 0 || x.a > 0).sort((a, b) => b.a - a.a);
   }
   function gallery() {
-    const list = creatives(), r = range();
+    const all = creatives(), list = all.filter((x) => !x.unid), r = range();
     const winners = list.filter((x) => x.a >= 50 && x.cpa && x.cpa <= 550000).length;
     $('#creativeNote').innerHTML = `<b style="color:#fff">${list.length}</b> creatives ran in ${r.start.slice(0, 7) === r.end.slice(0, 7) ? mLabel(r.end.slice(0, 7)) : 'the selected months'}; <b style="color:#FFAF03">${winners}</b> reached 50+ α at Rp550K or less. Creative figures use whole calendar months.`;
     let top = list.slice();
@@ -347,7 +350,7 @@
     observe($$('#gallery .reveal'));
     tilt($$('#gallery .cr'));
     setTimeout(() => $$('#gallery .cr__bar i').forEach((x) => { x.style.width = x.dataset.w + '%'; }), 200);
-    crTable(list);
+    crTable(all);
   }
   function tilt(cards) {
     cards.forEach((c) => {
@@ -356,14 +359,21 @@
     });
   }
   function crTable(list) {
-    const cols = [['name', 'Creative'], ['ch', 'Channel'], ['first', 'First seen'], ['cost', 'PayLater cost'], ['inst', 'Installs'], ['inc', 'Incoming'], ['ab', 'αβ'], ['a', 'α'], ['cpa', 'α-CPA']];
+    const cols = [['name', 'Creative'], ['fmt', 'Format'], ['ch', 'Channel'], ['first', 'First seen'], ['cost', 'PayLater cost'], ['inst', 'Installs'], ['inc', 'Incoming'], ['ab', 'αβ'], ['a', 'α'], ['cpa', 'α-CPA'], ['cl', 'Credit limit'], ['avgCl', 'Avg limit / αβ']];
     const q = state.search.toLowerCase();
-    let rows = list.filter((x) => !q || x.name.toLowerCase().includes(q));
+    const pinned = state.showUnid ? list.filter((x) => x.unid).sort((a, b) => a.ch.localeCompare(b.ch)) : [];
+    let rows = list.filter((x) => !x.unid && (!q || x.name.toLowerCase().includes(q)));
     const key = state.crSort, dir = state.crAsc ? 1 : -1;
     rows.sort((a, b) => { const va = a[key], vb = b[key]; if (va == null) return 1; if (vb == null) return -1; return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * dir; });
+    const tr = (x) => `<tr class="${x.unid ? 'row-unid' : ''}"><td class="name">${x.unid ? 'Unidentified <small>backend activations not matched to an ad</small>' : esc(x.name)}</td><td>${x.unid ? '–' : `<span class="fmt fmt--${esc(x.fmt.toLowerCase())}">${esc(x.fmt)}</span>`}</td><td><span class="pill">${x.ch}</span></td><td>${x.first && !x.unid ? dLabel(x.first) : '–'}</td><td>${x.unid ? '–' : fmtRp(x.cost)}</td><td>${x.unid ? '–' : fmtN(x.inst)}</td><td>${fmtN(x.inc)}</td><td>${fmtN(x.ab)}</td><td><b>${fmtFull(x.a)}</b></td><td class="${x.unid || x.cpa == null ? '' : x.cpa <= CAP ? 'cpa-good' : 'cpa-bad'}">${x.unid ? '–' : fmtRp(x.cpa)}</td><td>${fmtRp(x.cl)}</td><td>${fmtRp(x.avgCl)}</td></tr>`;
     $('#crTable').innerHTML = `<thead><tr>${cols.map(([k, l]) => `<th data-k="${k}" class="${k === key ? 'sorted' + (state.crAsc ? ' asc' : '') : ''}">${l}</th>`).join('')}</tr></thead><tbody>` +
-      rows.slice(0, 400).map((x) => `<tr><td class="name">${esc(x.name)}</td><td><span class="pill">${x.ch}</span></td><td>${x.first ? dLabel(x.first) : '–'}</td><td>${fmtRp(x.cost)}</td><td>${fmtN(x.inst)}</td><td>${fmtN(x.inc)}</td><td>${fmtN(x.ab)}</td><td><b>${fmtFull(x.a)}</b></td><td class="${x.cpa == null ? '' : x.cpa <= CAP ? 'cpa-good' : 'cpa-bad'}">${fmtRp(x.cpa)}</td></tr>`).join('') + '</tbody>';
-    $$('#crTable th').forEach((th) => th.addEventListener('click', () => { const k = th.dataset.k; state.crAsc = state.crSort === k ? !state.crAsc : (k === 'name' || k === 'cpa'); state.crSort = k; crTable(list); }));
+      pinned.map(tr).join('') + rows.slice(0, 400).map(tr).join('') + '</tbody>';
+    $$('#crTable th').forEach((th) => th.addEventListener('click', () => { const k = th.dataset.k; state.crAsc = state.crSort === k ? !state.crAsc : (k === 'name' || k === 'cpa' || k === 'fmt' || k === 'ch'); state.crSort = k; crTable(list); }));
+    const dot = $('#unidDot');
+    if (dot && !dot.dataset.wired) {
+      dot.dataset.wired = '1';
+      dot.addEventListener('click', () => { state.showUnid = !state.showUnid; dot.classList.toggle('off', !state.showUnid); dot.setAttribute('aria-pressed', state.showUnid); crTable(creatives()); });
+    }
   }
 
   /* ---------- accounts ---------- */
@@ -377,9 +387,9 @@
     let rows = [...map.values()].map((x) => { const info = D.accounts[x.id] || {}, k = kpi(x.v); return { ...x, ...k, name: info.name || x.id, pl: info.paylater, spend: k.costAll, cpa: info.paylater === 'Yes' && k.a ? k.cost / k.a : null }; });
     const key = state.accSort, dir = state.accAsc ? 1 : -1;
     rows.sort((a, b) => { const va = a[key], vb = b[key]; if (va == null) return 1; if (vb == null) return -1; return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * dir; });
-    const cols = [['name', 'Account'], ['ch', 'Channel'], ['pl', 'PayLater account'], ['spend', 'Spend'], ['inst', 'Installs'], ['ab', 'αβ'], ['a', 'α'], ['cpa', 'α-CPA']];
+    const cols = [['name', 'Account'], ['ch', 'Channel'], ['pl', 'PayLater account'], ['spend', 'Spend'], ['inst', 'Installs'], ['ab', 'αβ'], ['a', 'α'], ['cpa', 'α-CPA'], ['cl', 'Credit limit']];
     $('#accTable').innerHTML = `<thead><tr>${cols.map(([k, l]) => `<th data-k="${k}" class="${k === key ? 'sorted' + (state.accAsc ? ' asc' : '') : ''}">${l}</th>`).join('')}</tr></thead><tbody>` +
-      rows.map((x) => `<tr><td class="name">${esc(x.name)}<br><small style="color:#8A8A8A;font-weight:500">${x.id}</small></td><td>${x.ch}</td><td><span class="pill ${x.pl === 'Yes' ? 'pill--yes' : ''}">${x.pl === 'Yes' ? 'Yes · cost counts' : x.pl === 'No' ? 'No · α only' : x.pl || '–'}</span></td><td>${fmtRp(x.spend)}</td><td>${fmtN(x.inst)}</td><td>${fmtN(x.ab)}</td><td><b>${fmtFull(x.a)}</b></td><td class="${x.cpa == null ? '' : x.cpa <= CAP ? 'cpa-good' : 'cpa-bad'}">${x.cpa == null ? '–' : fmtRp(x.cpa)}</td></tr>`).join('') + '</tbody>';
+      rows.map((x) => `<tr><td class="name">${esc(x.name)}<br><small style="color:#8A8A8A;font-weight:500">${x.id}</small></td><td>${x.ch}</td><td><span class="pill ${x.pl === 'Yes' ? 'pill--yes' : ''}">${x.pl === 'Yes' ? 'Yes · cost counts' : x.pl === 'No' ? 'No · α only' : x.pl || '–'}</span></td><td>${fmtRp(x.spend)}</td><td>${fmtN(x.inst)}</td><td>${fmtN(x.ab)}</td><td><b>${fmtFull(x.a)}</b></td><td class="${x.cpa == null ? '' : x.cpa <= CAP ? 'cpa-good' : 'cpa-bad'}">${x.cpa == null ? '–' : fmtRp(x.cpa)}</td><td>${fmtRp(x.cl)}</td></tr>`).join('') + '</tbody>';
     $$('#accTable th').forEach((th) => th.addEventListener('click', () => { const k = th.dataset.k; state.accAsc = state.accSort === k ? !state.accAsc : (k === 'name' || k === 'cpa'); state.accSort = k; accounts(); }));
   }
 
